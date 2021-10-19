@@ -1,0 +1,41 @@
+{
+  "name": "cma-cgm-tetris-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "migration": "node_modules/.bin/sequelize db:migrate"
+  },
+  "keywords": [],
+  "author": "deepakgcsevpm@gmail.com",
+  "license": "ISC",
+  "dependencies": {
+    "@sendgrid/mail": "^7.4.5",
+    "await-to-js": "^3.0.0",
+    "aws-sdk": "^2.936.0",
+    "bluebird": "^3.7.2",
+    "body-parser": "^1.19.0",
+    "cookie-parser": "^1.4.5",
+    "cors": "^2.8.5",
+    "dotenv": "^10.0.0",
+    "ejs": "^3.1.6",
+    "express": "^4.17.1",
+    "express-basic-auth": "^1.2.0",
+    "fs": "^0.0.1-security",
+    "helmet": "^4.6.0",
+    "json2csv": "^5.0.6",
+    "jwt-simple": "^0.5.6",
+    "lodash": "^4.17.21",
+    "moment-timezone": "^0.5.33",
+    "mysql2": "^2.2.5",
+    "querystring": "^0.2.1",
+    "request": "^2.88.2",
+    "request-promise": "^4.2.6",
+    "sequelize": "^6.6.4",
+    "sequelize-cli": "^6.2.0",
+    "winston": "^3.3.3",
+    "winston-cloudwatch": "^2.5.2"
+  }
+}
