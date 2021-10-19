@@ -16,7 +16,7 @@ WORKDIR /usr/src/app
 COPY . /usr/src/app/
 
 # LOGS VOLUME
-VOLUME ["/var/log/cmaCgmTetrisApi", "/usr/src/cmaCgmTetrisApi/public"]
+VOLUME ["/var/log/gameBEApi", "/usr/src/gameBEApi/public"]
 
 #copy node_modules folder from tmp
 RUN cp -a /tmp/node_modules /usr/src/app/
@@ -25,7 +25,7 @@ RUN cp -a /tmp/node_modules /usr/src/app/
 #DEFAULT IS SET TO PRODUCTION
 ARG NODE_ENV=production
 ARG APP_ENV=production
-ARG APP_URL=https://cma-cgm-tetris-api-staging.eu-staging.kacdn.net
+ARG APP_URL=
 RUN echo ${NODE_ENV} ${APP_URL}
 
 #expose port

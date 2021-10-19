@@ -4,7 +4,7 @@ const winston = require('winston'),
 const config = require('../../config');
 
 winston.add(new WinstonCloudWatch({
-  logGroupName: `cmacgmtetris-${config.env}`,
+  logGroupName: `game-be-${config.env}`,
   logStreamName: 'general',
   awsAccessKeyId: config.awsAccessKey,
   awsSecretKey: config.awsSecretKey,
