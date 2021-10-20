@@ -88,19 +88,12 @@ router.put("/profile", authController.validate, async (req, res) => {
 // })
 
 
-// /**
-//  * /report/download - winner list download
-//  */
-//  router.get("/report/download", staticUserAuth, async (req, res) => {
-//   gameController.downloadReport(req, res);
-// });
-
-// /**
-//  * /report/download/date - download report by start date and end date
-//  */
-//  router.get("/report/download/date", staticUserAuth, async (req, res) => {
-//   gameController.downloadReportByDate(req, res);
-// });
+/**
+ * /report/download - download report by start date and end date
+ */
+ router.get("/report/download", staticUserAuth, async (req, res) => {
+  gameController.downloadReportByDate(req, res);
+});
 
 
 module.exports = router;

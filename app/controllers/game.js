@@ -169,118 +169,47 @@ exports.leaderboard = (request) => {
 /**
  * downloadReport - download report from database
  */
- exports.downloadReport = async (req, res) =>{
-  let store_name = req.query.region;
-
-  if(!store_name) return res.status(400).json({ success: false, message: "Region required" });
-  let attributes = [["id", "user_id"], "first_name", "last_name", "email", "phone", ["way_comm", "communicate_via"], "is_hacker", ["store_name", "region"], ["store_location", "store"], "high_score", ["created_at", "signup_date"], "utm_source", "utm_medium", "utm_campaign", "utm_content", "facebook", "whats_app", "messenger", "line", "twitter", "kakao", "copy"];
-
-  if(store_name === "uae") attributes.push('country');
-  else if(store_name === "ru") {
-    attributes.push('coupon');
-    attributes.push('ru_client');
-  }
-  // get report from database
-  let [error, games] = await to(models.users.findAll({
-    where: { store_name },
-    include: [{
-      as: 'games',
-      model: models.games,
-      required: false
-    }],
-    attributes: attributes
-  }));
-  if(error) {
-      logger.error(`downloadReport > get reports > ${error.toString()}`);
-      return res.status(500).json({ success: false, message: "Something went wrong. Please try again after some time" });
-  }
-  games = helper.sequelizeToJson('Array', games);
-
-  if(games.length === 0) return res.json({ success: true, message: "No data found" });
-
-  // mark currentuser for highlight in front end
-  games = games.map((game, index)=>{
-    game.game_count = game.games.length
-    !!game.games && delete game.games;
-    // !!game.is_hacker.toString() && delete game.is_hacker;
-    !!game.updated_at && delete game.updated_at;
-    return game;
-  });
-
-  // convert json object to csv file
-  let [err, destination] = await to(helper.jsonToCsv(games, 'report'));
-  if(err) return res.status(500).json({ success: false, message: "Something went wrong. Please try again after some time" });
-
-  res.download(destination);
-
-};
-
-
-
-/**
- * downloadReport - download report from database
- */
  exports.downloadReportByDate = async (req, res) =>{
+  let { date } = req.query; // date=2021-10-19
+  if(!date) return resolve({ status: 400, success: false,  message: "Date required" });
 
-  let startDateTime = req.query.startDate;
-  let endDateTime = req.query.endDate;
-  let store_name = req.query.region;
-  let attributes = [["id", "user_id"], "first_name", "last_name", "email", "phone", ["way_comm", "communicate_via"], "is_hacker", ["store_name", "region"], ["store_location", "store"],  "high_score", ["created_at", "signup_date"], "utm_source", "utm_medium", "utm_campaign", "utm_content", "facebook", "whats_app", "messenger", "line", "twitter", "kakao", "copy"];
+  let startDate = moment.tz(date, "YYYY-MM-DD", config.timezone).utc().format();
+  let endDate =  moment.tz(date, "YYYY-MM-DD" , config.timezone).endOf('day').utc().format();
 
-  if(!startDateTime || !endDateTime || !store_name) return res.status(400).json({ success: false, message: "Region, start date and end date required" });
-  startDateTime = Date.parse(startDateTime);
-  endDateTime = Date.parse(endDateTime);
+  console.log(startDate, endDate);
+  logger.info(`Date filter - start date - ${startDate} - endDate - ${endDate}`);
 
-  if(store_name === 'uae') attributes.push('country');
-  else if(store_name === "ru"){
-    attributes.push('coupon');
-    attributes.push('ru_client');
-  }
-
-  // Date.parse will return integer for true or return NaN for invalid date
-  // to validate in if condition !!Date.parse we can use this will return true for valid return false for invalid
-  // if invalid date return error message
-  if(!!!startDateTime) return res.status(400).json({ success: false, message: "Invalid date. Date must be in YYYY-MM-DD format" });
-  if(!!!endDateTime) return res.status(400).json({ success: false, message: "Invalid date. Date must be in YYYY-MM-DD format" });
-
-  startDateTime = moment.utc(startDateTime);
-  endDateTime = moment().utc(endDateTime).endOf('day');
-
-  console.log(startDateTime, endDateTime);
-  logger.info(`startDateTime - ${startDateTime} and endDateTime - ${endDateTime}`);
-
-  // get report from database
-  let [error, games] = await to(models.users.findAll({
-    where: { store_name },
+  let [error, games] = await to(models.games.findAll({
+    // get today played games
+    where: { created_at: { [Op.gte]: startDate, [Op.lte]: endDate } },
+    // group by user_id
+    group: ["user_id"],
+    // get today's max score of user and merge user details by alias/rename
+    attributes: [[sequelize.col('user.name'), 'name'], [sequelize.col('user.email'), 'email'], [sequelize.col('user.phone'), 'phone'],[sequelize.fn('max', sequelize.col('score')), "highScore"]],
+    // include user details
     include: [{
-      as: 'games',
-      model: models.games,
-      where: { created_at: { [Op.gte]: startDateTime, [Op.lte]: endDateTime } },
-    },
-  ],
-  attributes: attributes
+      model: models.users,
+      as: 'user',
+      attributes: []
+    }],
+    // order by high score  in descending order
+    order: [[[sequelize.col("highScore"), "DESC"]]],
+    // get raw data - this will give included data as user.name user.email etc.,
+    raw: true
   }));
-  if(error) {
-      logger.error(`downloadReport > get reports > ${error.toString()}`);
-      return res.status(500).json({ success: false, message: "Something went wrong. Please try again after some time" });
-  }
+  if (error) return helper.logErrorAndRespond("downloadReportByDate  > ", error, reject);
 
-  if(games.length === 0) return res.json({ success: true, message: "No data found" });
+  if(games.length === 0) return resolve({ status: 200, success: true,  message: "No games found" });
 
-  // return res.json(games)
-  games = helper.sequelizeToJson('Array', games);
-
-  // mark currentuser for highlight in front end
-  games = games.map((game, index)=>{
-    game.game_count = game.games.length
-    !!game.games && delete game.games;
-    // !!game.is_hacker.toString() && delete game.is_hacker;
-    !!game.updated_at && delete game.updated_at;
-    return game;
+  games.forEach((game, index)=>{
+    game.s_no = index + 1;
+    game.date = date;
   });
 
+  let fields = ["s_no", "date", "name", "email", "phone", "highScore"]
+
   // convert json object to csv file
-  let [err, destination] = await to(helper.jsonToCsv(games, 'report'));
+  let [err, destination] = await to(helper.jsonToCsv(games, 'report', fields));
   if(err) return res.status(500).json({ success: false, message: "Something went wrong. Please try again after some time" });
 
   res.download(destination);

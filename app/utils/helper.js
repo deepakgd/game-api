@@ -212,7 +212,7 @@ var self = module.exports = {
      * @param {OBJECT} data
      * @param {STRING} filename
      * */
-     jsonToCsv: function(data, filename){
+     jsonToCsv: function(data, filename, fields=null){
       return new Promise((resolve, reject) => {
           fs.writeFile(`/tmp/${filename}.json`, JSON.stringify(data),'utf8', function(err){
               if(err) return reject(err);
@@ -222,7 +222,7 @@ var self = module.exports = {
 
               const input = fs.createReadStream(`/tmp/${filename}.json`, { encoding: 'utf8' });
               const output = fs.createWriteStream(outputPath, { encoding: 'utf8' });
-              const json2csv = new Json2csvTransform();
+              const json2csv = new Json2csvTransform({fields});
 
               const processor = input.pipe(json2csv).pipe(output);
 
