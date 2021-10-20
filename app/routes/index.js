@@ -2,8 +2,8 @@ const router = require("express").Router(),
   to = require('await-to-js').to,
   basicAuth = require('express-basic-auth');
 
-const authController = require("./../controllers/auth"),
-  gameController = require('./../controllers/game');
+const authController = require("@controllers/auth"),
+  gameController = require('@controllers/game');
 
 
 // authentication for particular route to view report details

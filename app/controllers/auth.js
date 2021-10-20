@@ -4,10 +4,10 @@ const to = require('await-to-js').to,
     { Op } = require("sequelize"),
     requestPromise = require("request-promise");
 
-const config = require('../../config'),
-    helper = require('../utils/helper'),
-    logger = require('../utils/logger'),
-    models = require('../models');
+const config = require('@config'),
+    helper = require('@utils/helper'),
+    logger = require('@utils/logger'),
+    models = require('@models');
 
 const jwtSecret = config.jwtSecret;
 

@@ -28,6 +28,7 @@
     "json2csv": "^5.0.6",
     "jwt-simple": "^0.5.6",
     "lodash": "^4.17.21",
+    "module-alias": "^2.2.2",
     "moment-timezone": "^0.5.33",
     "mysql2": "^2.2.5",
     "querystring": "^0.2.1",
@@ -37,5 +38,13 @@
     "sequelize-cli": "^6.2.0",
     "winston": "^3.3.3",
     "winston-cloudwatch": "^2.5.2"
+  },
+  "_moduleAliases": {
+    "@controllers": "./app/controllers",
+    "@models": "./app/models",
+    "@utils": "./app/utils",
+    "@modelAssociations": "./app/modelAssociations",
+    "@config": "./config",
+    "@routes": "./app/routes"
   }
 }

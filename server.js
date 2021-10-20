@@ -1,3 +1,5 @@
+require('module-alias/register')
+
 const express = require('express'),
   app = express(),
   path = require('path'),
@@ -6,10 +8,10 @@ const express = require('express'),
   cookieParser = require('cookie-parser'),
   helmet = require("helmet");
 
-const routes = require('./app/routes'),
-  logger = require('./app/utils/logger'),
-  config = require('./config'),
-  modelAssociations = require('./app/modelAssociations');
+const routes = require('@routes'),
+  logger = require('@utils/logger'),
+  config = require('@config'),
+  modelAssociations = require('@modelAssociations');
 
 modelAssociations();
 

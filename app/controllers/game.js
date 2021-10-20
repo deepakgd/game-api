@@ -6,10 +6,10 @@ const to = require("await-to-js").to,
   sequelize = require("sequelize"),
   Op = sequelize.Op;
 
-const config = require("../../config"),
-  logger = require("../utils/logger"),
-  helper = require("../utils/helper"),
-  models = require("../models");
+const config = require("@config"),
+  logger = require("@utils/logger"),
+  helper = require("@utils/helper"),
+  models = require("@models");
 
 /**
  * save - validate and save game score details in database
