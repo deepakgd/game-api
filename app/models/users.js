@@ -30,10 +30,6 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.BOOLEAN,
         defaultValue: false
       },
-      high_score: {
-        type: DataTypes.INTEGER,
-        defaultValue: null
-      },
       created_at: DataTypes.DATE,
       updated_at: DataTypes.DATE
     },

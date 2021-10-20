@@ -48,8 +48,6 @@ module.exports = {
             [error, user] = await to(getUserAndFormat(user.id));
             if(error) return helper.logErrorAndRespond('signin > getUserAndFormat > ', error, reject);
 
-            if(!user.highScore) isNewUser = true;
-
 
             // create token and send it
             let payload = { id: user.id, email: email, phone: phone };
@@ -354,7 +352,7 @@ function decodeJwtToken(token){
 function getUserAndFormat(id){
   return models.users.findOne({
     where: { id },
-    attributes: ["id", "name", "email", "phone", ["high_score", "highScore"]],
+    attributes: ["id", "name", "email", "phone"],
     raw: true,
   });
 }

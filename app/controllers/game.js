@@ -23,7 +23,7 @@ exports.save = (request) => {
 
     let { startTime: start_time, endTime: end_time, score } = request.body;
 
-    let { id: user_id, store_name, high_score } = request.user;
+    let { id: user_id, store_name } = request.user;
 
     // request body validation
     if (!start_time || !end_time || score === undefined || score === "" || score === null) return resolve({
@@ -52,21 +52,7 @@ exports.save = (request) => {
     );
     if (error) return helper.logErrorAndRespond("save > create > ", error, reject);
 
-    let newHighScore = null;
-
-
-    // if(!isHacked){
-    //   // update high score in  user table
-    //   if (!high_score) newHighScore = score;
-    //   if (score > high_score) newHighScore = score;
-
-    //   if (newHighScore) {
-    //     [error, response] = await to(models.users.update({ high_score: newHighScore }, { where: { id: user_id } }));
-    //     if (error) return helper.logErrorAndRespond("update high score > ", error, reject);
-    //   }
-    // }
-
-    return resolve({ success: true, status: 200, message: "Game saved successfully", highScore: newHighScore ? newHighScore : high_score, currentScore: score, });
+    return resolve({ success: true, status: 200, message: "Game saved successfully", score: score });
   });
 };
 

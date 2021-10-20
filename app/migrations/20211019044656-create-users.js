@@ -24,10 +24,6 @@ module.exports = {
         type: Sequelize.BOOLEAN,
         defaultValue: false
       },
-      high_score: {
-        type: Sequelize.INTEGER,
-        defaultValue: null
-      },
       created_at: Sequelize.DATE,
       updated_at: Sequelize.DATE
     });
