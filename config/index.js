@@ -32,6 +32,7 @@ const config = {
     "http://localhost:3000",
     "chrome-extension://aicmkgpgakddgnaphhhpliifpcfhicfo",
   ],
+  leaderboardLimit: 10
 };
 
 

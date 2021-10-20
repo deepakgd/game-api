@@ -78,14 +78,14 @@ router.put("/profile", authController.validate, async (req, res) => {
 })
 
 
-// /**
-//  * /leaderboard - show user scores and rank details
-//  */
-//  router.get("/leaderboard", authController.validate, async (req, res) => {
-//   let [error, response] = await to(gameController.leaderboard(req));
-//   if(error) return res.status(500).json({ success: false, message: 'Something went wrong' });
-//   return res.status(response.status).json({ success: (response.status === 200)?true:false, message: response.message, data: response.data, redirect: response.redirect });
-// })
+/**
+ * /leaderboard - show user scores and rank details
+ */
+ router.get("/leaderboard", authController.validate, async (req, res) => {
+  let [error, response] = await to(gameController.leaderboard(req));
+  if(error) return res.status(500).json({ success: false, message: 'Something went wrong' });
+  return res.status(response.status).json({ success: (response.status === 200)?true:false, message: response.message, data: response.data, redirect: response.redirect });
+})
 
 
 /**

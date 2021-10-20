@@ -56,16 +56,20 @@ exports.save = (request) => {
   });
 };
 
-exports.showScore = (request) => {
+/**
+ *
+ * @param {OBJECT} request
+ * @returns {OBJECT} - name, score, rank
+ */
+exports.leaderboard = (request) => {
   return new Promise(async (resolve, reject) => {
     let { id: user_id } = request.user;
-    let { date } = request.query; // date=2021-10-19
 
-    let startDate = moment.tz(date, "YYYY-MM-DD", config.timezone).utc().format();
-    let endDate =  moment.tz(date, "YYYY-MM-DD" , config.timezone).endOf('day').utc().format();
+    let startDate = moment.tz(config.timezone).startOf('day').utc().format();
+    let endDate =  moment.tz(config.timezone).endOf('day').utc().format();
 
-    console.log(startDate, endDate);
-    logger.info(`Date filter - start date - ${startDate} - endDate - ${endDate}`);
+    console.log("Leaderboard:", startDate, endDate);
+    logger.info(`Leaderboard - start date - ${startDate} - endDate - ${endDate}`);
 
     let [error, games] = await to(models.games.findAll({
       // get today played games
@@ -73,7 +77,7 @@ exports.showScore = (request) => {
       // group by user_id
       group: ["user_id"],
       // get today's max score of user and merge user details by alias/rename
-      attributes: ["user_id", [sequelize.fn('max', sequelize.col('score')), "highScore"], [sequelize.col('user.name'), 'name'], [sequelize.col('user.email'), 'email']],
+      attributes: ["user_id", [sequelize.col('user.name'), 'name'], [sequelize.col('user.email'), 'email'], [sequelize.col('user.phone'), 'phone'],[sequelize.fn('max', sequelize.col('score')), "highScore"]],
       // include user details
       include: [{
         model: models.users,
@@ -87,83 +91,29 @@ exports.showScore = (request) => {
     }));
     if (error) return helper.logErrorAndRespond("get games  > ", error, reject);
 
-    if(!date) return resolve({ status: 400, success: false,  message: "Date required" });
-
     if(games.length === 0) return resolve({ status: 200, success: true,  message: "No games found" });
 
-    games.forEach(game=>game.isCurrentUser = (game.user_id === user_id));
+    // assign current user game, index and user rank
+    let currentGame, currentGameIndex;
+    games.forEach((game, index)=>{
+      game.rank = index + 1;
+      if(game.user_id === user_id){
+        game.isCurrentUser = true;
+        currentGameIndex = index;
+        currentGame = game;
+      }else game.isCurrentUser = false;
+    });
+
+    games = games.slice(0, config.leaderboardLimit)
+
+    console.log(currentGameIndex, config.leaderboardLimit)
+
+    if(currentGameIndex >= config.leaderboardLimit && currentGame) games.push(currentGame);
 
     resolve({ success: true, status: 200, data: games });
 
   })
 }
-
-
-exports.leaderboard = (request) => {
-  return new Promise(async (resolve, reject) => {
-    let { id: user_id, store_name, first_name, high_score } = request.user;
-
-    if (!first_name && !high_score) return resolve({
-        status: 400,
-        success: false,
-        message: "To view leadeboard you have to update your profile and play atleast one game",
-        redirect: true,
-      });
-
-    let [error, games] = await to(
-      models.users.findAll({
-        where: {
-          [Op.and]: [
-            { high_score: { [Op.ne]: null } },
-            { high_score: { [Op.ne]: "" } },
-            { first_name: { [Op.ne]: "" } },
-            { first_name: { [Op.ne]: null } },
-            { store_name }
-          ]
-        },
-        order: [
-          ["high_score", "DESC"]
-        ],
-        attributes: ["id", ["first_name", "firstName"], ["high_score", "highScore"]],
-        // limit: 5
-      })
-    );
-    if (error)
-      return helper.logErrorAndRespond("get all games > ", error, reject);
-
-    if (games && games.length > 0)
-      games = helper.sequelizeToJson("Array", games);
-
-    // mark currentuser for highlight in front end
-    let currentUser, currentUserIndex, result;
-    result = games.map((game, index)=>{
-      game.rank = index + 1;
-      console.log(game.id)
-      if(game.id === user_id) {
-        game.isCurrentUser = true;
-        currentUser = Object.assign({}, game);
-        currentUserIndex = index;
-      }else game.isCurrentUser = false;
-      return game;
-    });
-
-    result = result.slice(0, 5);
-
-    console.log(currentUserIndex, currentUser,"--->", user_id)
-
-    // current user not in top 5
-    if(currentUserIndex >= 5) {
-      result.push(currentUser);
-    }
-
-    return resolve({
-      status: 200,
-      message: "Success",
-      redirect: false,
-      data: result,
-    });
-  });
-};
 
 
 /**
