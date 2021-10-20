@@ -68,21 +68,30 @@ exports.showScore = (request) => {
     logger.info(`Date filter - start date - ${startDate} - endDate - ${endDate}`);
 
     let [error, games] = await to(models.games.findAll({
+      // get today played games
       where: { created_at: { [Op.gte]: startDate, [Op.lte]: endDate } },
+      // group by user_id
+      group: ["user_id"],
+      // get today's max score of user and merge user details by alias/rename
+      attributes: ["user_id", [sequelize.fn('max', sequelize.col('score')), "highScore"], [sequelize.col('user.name'), 'name'], [sequelize.col('user.email'), 'email']],
+      // include user details
       include: [{
         model: models.users,
         as: 'user',
-        attributes: ["id", "name", "email"]
+        attributes: []
       }],
-      order: [
-        ["score", "DESC"]
-      ],
+      // order by high score  in descending order
+      order: [[[sequelize.col("highScore"), "DESC"]]],
+      // get raw data - this will give included data as user.name user.email etc.,
+      raw: true
     }));
     if (error) return helper.logErrorAndRespond("get games  > ", error, reject);
 
     if(!date) return resolve({ status: 400, success: false,  message: "Date required" });
 
     if(games.length === 0) return resolve({ status: 200, success: true,  message: "No games found" });
+
+    games.forEach(game=>game.isCurrentUser = (game.user_id === user_id));
 
     resolve({ success: true, status: 200, data: games });
 
