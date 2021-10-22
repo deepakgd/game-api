@@ -63,7 +63,8 @@ exports.save = (request) => {
  */
 exports.leaderboard = (request) => {
   return new Promise(async (resolve, reject) => {
-    let { id: user_id } = request.user;
+    if(!request.user) request.user = {};
+    let { id: user_id = null } = request.user;
 
     let startDate = moment.tz(config.timezone).startOf('day').utc().format();
     let endDate =  moment.tz(config.timezone).endOf('day').utc().format();

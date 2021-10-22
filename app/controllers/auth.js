@@ -121,15 +121,20 @@ module.exports = {
      * @param {OBJECT} req - contains headers, body and etc.,
      * @param {OBJECT} res - contains response fields
      * @param {FUNCTION} next - next function like callback
+     * @param {BOOLEAN} isAllowed - special way - public leaderboard visit
      */
-    validate: async function(req, res, next){
+    validate: async function(req, res, next, isAllowed=false){
 
       console.log('Cookies: ', req.cookies.token)
       logger.info('Cookies: ', req.cookies.token)
 
         // Cookies that have been signed
         // server side validation
-        if(!req.cookies.token) return res.status(401).json({ success: false, message: "Authentication required" });
+        if(!req.cookies.token && !isAllowed) return res.status(401).json({ success: false, message: "Authentication required" });
+        
+        // allow user to access 
+        if(!req.cookies.token && isAllowed) return next();
+
         let token = req.cookies.token
         // let token = req.headers.authorization.replace('Bearer ', '');
         // if(!token) return res.status(401).json({ success: false, message: "Invalid token" });
