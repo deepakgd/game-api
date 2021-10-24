@@ -62,58 +62,38 @@ module.exports = {
      */
     signUp: function(request){
       return new Promise(async (resolve, reject) => {
-        let { name, email, phone = "", wayComm: way_comm, isSubscribe: is_subscribe } = request.body;
+        let { name, email = "", phone = "", isSubscribe: is_subscribe } = request.body;
+        let error, response, user_id;
 
-        let user = request.user;
-        console.log("user ", user)
-        if(!email || !phone) return resolve({ success: false, status: 400, message: "Email and phone number are required" })
+        // validation
+        let validate = signupValidation(request.body);
+        if(!validate.success) return resolve(validate);
 
-        // check user email or phone number updated
-        let modified = checkModification(user, phone, email);
-        if(!modified.success) return resolve(modified);
+        // user already exists validation
+        [error, response] = await to(checkUserExists(phone, email));
+        if(error) return helper.logErrorAndRespond('checkuserexists > ', error, reject);
 
-        if(user.store_name != "za"){
+        if(!response.success) return resolve(response);
 
-          // validation
-          let validate = signupValidation(request.body);
-          if(!validate.success) return resolve(validate);
+        if(!response.user){
+            // update user details
+            let [err, newUser] = await to(models.users.create({
+              name,
+              email,
+              phone,
+              is_subscribe
+            }));
+            if(err) return helper.logErrorAndRespond('signup > update user > ', err, reject);
+            user_id = newUser.id;
+        }else user_id = response.user.id;
 
-
-          if(email && phone && !(user.phone && user.email)){
-            let checkBy = null;
-            if(user.phone) checkBy = "email";
-            else checkBy = "phone";
-
-            // user already exists validation
-            let [err, response] = await to(checkUserExists(phone, email, user, checkBy));
-            if(err) return helper.logErrorAndRespond('checkuserexists > ', err, reject);
-
-            if(response.user) return resolve({ sucess: false, status: 400, message: response.message });
-          }
-
-        }
-
-        let updatedData = {
-          name,
-          email,
-          phone,
-          way_comm,
-          is_subscribe
-        }
-
-        let condition = {
-          where: {
-            id: user.id
-          }
-        }
-
-        // update user details
-        let [error, update] = await to(models.users.update(updatedData, condition));
-        if(error) return helper.logErrorAndRespond('signup > update user > ', error, reject);
-
-        let responseData = { status: 200, message: 'User details are updated successfully' };
-
-        resolve(responseData);
+        console.log("user_id is ", user_id);
+       
+        // create token and send it
+        let payload = { id: user_id, email: email ? email : response.user?.email, phone: phone ? phone:response.user?.phone };
+        let token = jwt.encode(payload, jwtSecret);
+        // resolve({ status: 200, message: 'Login success', token, isNewUser, user });
+        resolve({ status: 200, message: 'Login success', token, user: payload });
       });
     },
     /**
@@ -226,8 +206,8 @@ function signinValidation(data){
  * @param {OBJECT} data - request body
  */
 function signupValidation(data){
-  let { name, email, phone = "", wayComm: way_comm, isSubscribe: is_subscribe } = data;
-  if(!email && !phone) return { success: false, status: 400, message:  "Phone or Email required" };
+  let { name, email, phone = "", isSubscribe: is_subscribe } = data;
+  if(!email || !phone) return { success: false, status: 400, message:  "Phone and Email required" };
   if(email && !helper.validateEmail(email)) return { success: false, status: 400, message: "Invalid email address" };
   if(phone && phone.toString().length < 11) return { success: false, status: 400, message: "Invalid phone number" };
   return { success: true };
@@ -241,44 +221,41 @@ function signupValidation(data){
  * @returns
  */
 function checkModification(user, phone, email){
+  return new Promise(async (resolve, reject) => {
     if(phone && user.phone && user.phone != phone.toString()) return { success: false, status: 400, message: "Cannot modify phone number" };
 
     if(email && user.email && user.email != email) return { success: false, status: 400, message: "Cannot modify email address" };
 
     return { success: true };
+  })
 }
 
 /**
  * checkUserExists - check user already exits
  * @param {STRING} phone
  * @param {STRING} email
- * @param {OBJECT} user
- * @param {STRING} checkBy
  * @returns
  */
-function checkUserExists(phone, email, user, checkBy){
+function checkUserExists(phone, email){
   return new Promise(async (resolve, reject) => {
-    let condition = {
-      where: { },
-      raw: true,
-    }
-
-    let message = null;
-
-    // already phone exists then check for given email id is already taken or not
-    if(checkBy === "phone") {
-      condition.where.phone = phone;
-      message = "phone_registered";
-    }else {
-      message = "email_registered";
-      condition.where.email = email;
-    }
-
-    // get user from db
-    let [error, user] = await to(models.users.findOne(condition));
+    let [error, user] = await to(models.users.findOne({ 
+      attributes: ["id", "name", "email", "phone"],
+      where: { 
+        [Op.or]: [
+          { email: email },
+          { phone: phone }
+        ]
+      },
+    }));
     if(error) return reject(error);
+    console.log("user->", user);
     if(!user) return resolve({ success: true, user: null });
-    resolve({ success: true, user: user, message });
+
+    // user already registered but email/phone mismatch
+    if(user.email != email) return resolve({ success: false, status: 400, message: "email_invalid" });
+    if(user.phone != phone) return resolve({ success: false, status: 400, message: "phone_invalid" });
+  
+    return resolve({ success: true, user })
   });
 }
 

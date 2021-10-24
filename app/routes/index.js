@@ -39,10 +39,11 @@ router.get("/", (req, res) => {
 /**
  * /profile - update user profile
  */
-router.put("/profile", authController.validate, async (req, res) => {
+router.post("/signup", async (req, res) => {
   let [error, response] = await to(authController.signUp(req));
   if(error) return res.status(500).json({ success: false, message: 'Something went wrong' });
-  return res.status(response.status).json({ success: (response.status === 200)?true:false, message: response.message, coupon: response.coupon });
+  if(response.status === 200) res.setHeader('Set-Cookie', `token=${response.token}; HttpOnly`);
+  return res.status(response.status).json(response);
 });
 
 
