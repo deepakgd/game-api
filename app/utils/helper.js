@@ -51,6 +51,14 @@ var self = module.exports = {
         return re.test(email);
     },
     /**
+     * validatePhone - return whether given phone is valid or not
+     * @param {STRING} - email address
+     */
+    validatePhone: function(phone){
+      let reg = /\+86\s[0-9]{11,13}/;
+      return reg.test(phone);
+    },
+    /**
      * Helper function - to log error in console as well as in AWS cloud logs and also send something went wrong message to end user
      * @param {STRING} method
      * @param {OBJECT} error
@@ -261,5 +269,5 @@ function logInfo(message){
 function logError(error){
     console.log(error);
     logger.error(`ERROR FROM > ${error}`);
-    self.sendMail(null, config.reportEmail, `Givenchy Error - ${config.env}`, error.toString(), 'text');
+    self.sendMail(null, config.reportEmail, `Error - ${config.env}`, error.toString(), 'text');
 }

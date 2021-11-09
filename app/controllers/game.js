@@ -21,14 +21,14 @@ exports.save = (request) => {
       response,
       isHacked = false;
 
-    let { startTime: start_time, endTime: end_time, score } = request.body;
+    let { startTime: start_time = null, endTime: end_time=null, score } = request.body;
 
-    let { id: user_id, store_name } = request.user;
+    let { id: user_id } = request.user;
 
     // request body validation
-    if (!start_time || !end_time || score === undefined || score === "" || score === null) return resolve({
+    if (score === undefined || score === "" || score === null) return resolve({
       status: 400,
-      message: "Start time, end time and score required",
+      message: "Score required",
     });
 
     // check valid game or not
@@ -42,12 +42,11 @@ exports.save = (request) => {
 
     // save game score
     [error, response] = await to(models.games.create({
-        start_time: moment(start_time),
-        end_time: moment(end_time),
+        start_time: start_time,
+        end_time: end_time,
         score: score,
         user_id: user_id,
-        is_hacked: isHacked,
-        store_name: store_name,
+        is_hacked: isHacked
       })
     );
     if (error) return helper.logErrorAndRespond("save > create > ", error, reject);
@@ -78,7 +77,7 @@ exports.leaderboard = (request) => {
       // group by user_id
       group: ["user_id"],
       // get today's max score of user and merge user details by alias/rename
-      attributes: ["user_id", [sequelize.col('user.name'), 'name'], [sequelize.col('user.email'), 'email'], [sequelize.col('user.phone'), 'phone'],[sequelize.fn('max', sequelize.col('score')), "highScore"]],
+      attributes: ["user_id", [sequelize.col('user.name'), 'name'], [sequelize.fn('max', sequelize.col('score')), "highScore"]],
       // include user details
       include: [{
         model: models.users,
@@ -122,7 +121,7 @@ exports.leaderboard = (request) => {
  */
  exports.downloadReportByDate = async (req, res) =>{
   let { date } = req.query; // date=2021-10-19
-  if(!date) return resolve({ status: 400, success: false,  message: "Date required" });
+  if(!date) return res.json({ status: 400, success: false,  message: "Date required" });
 
   let startDate = moment.tz(date, "YYYY-MM-DD", config.timezone).utc().format();
   let endDate =  moment.tz(date, "YYYY-MM-DD" , config.timezone).endOf('day').utc().format();
@@ -136,7 +135,7 @@ exports.leaderboard = (request) => {
     // group by user_id
     group: ["user_id"],
     // get today's max score of user and merge user details by alias/rename
-    attributes: [[sequelize.col('user.name'), 'name'], [sequelize.col('user.email'), 'email'], [sequelize.col('user.phone'), 'phone'],[sequelize.fn('max', sequelize.col('score')), "highScore"]],
+    attributes: [[sequelize.col('user.name'), 'name'], [sequelize.col('user.email'), 'email'], [sequelize.col('user.phone'), 'phone'],[sequelize.fn('max', sequelize.col('score')), "highScore"], [sequelize.fn('COUNT', sequelize.col('user_id')), 'gameCount']],
     // include user details
     include: [{
       model: models.users,
@@ -148,16 +147,19 @@ exports.leaderboard = (request) => {
     // get raw data - this will give included data as user.name user.email etc.,
     raw: true
   }));
-  if (error) return helper.logErrorAndRespond("downloadReportByDate  > ", error, reject);
+  if (error) {
+    logger.error("downloadReportByDate  > ", error);
+    res.json({ status: 500, error: error })
+  }
 
-  if(games.length === 0) return resolve({ status: 200, success: true,  message: "No games found" });
+  if(games.length === 0) return res.json({ status: 200, success: true,  message: "No games found" });
 
   games.forEach((game, index)=>{
     game.s_no = index + 1;
     game.date = date;
   });
 
-  let fields = ["s_no", "date", "name", "email", "phone", "highScore"]
+  let fields = ["s_no", "date", "name", "email", "phone", "highScore", "gameCount"];
 
   // convert json object to csv file
   let [err, destination] = await to(helper.jsonToCsv(games, 'report', fields));
@@ -169,15 +171,9 @@ exports.leaderboard = (request) => {
 
 /**
  * validateGame - validate whether game play is valid or not
- * @param {STRING} start - start date
- * @param {STRING} end - end date
  * @param {INT} score - game score
  */
-function validateGame(start, end, score) {
-  console.log(start, end);
-  // let difference = moment(end).diff(moment(start), "seconds");
-  // console.log(difference);
-  // if (difference < 5 || difference > 30) return false;
+function validateGame(score) {
   if (score <= config.game.maxScore) return true;
   return false;
 }

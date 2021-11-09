@@ -7,62 +7,19 @@ const to = require('await-to-js').to,
 const config = require('@config'),
     helper = require('@utils/helper'),
     logger = require('@utils/logger'),
-    models = require('@models');
+    models = require('@models'),
+    gameController = require('@controllers/game');
 
 const jwtSecret = config.jwtSecret;
 
 module.exports = {
     /**
-     * formOne - validate username, password and return jwt token
+     * authenticate - validate and update profile information
      * @param {OBJECT} credential - contains username and password
      */
-     login: function(request){
-        return new Promise(async (resolve, reject) => {
-            let { phone, email } = request.body;
-            let isNewUser = false, user;
-            phone ? phone = phone.toString(): null;
-
-            // validation
-            let validation = signinValidation(request.body);
-            if(!validation.success) return resolve(validation);
-
-            // get user by email/phone
-            let [error, response] = await to(getUser(email, phone));
-            if(error) return helper.logErrorAndRespond('signin > getuser > ', error, reject);
-
-            if(!response.success) return resolve(response);
-            user = response.user;
-
-            if(!user) {
-
-              let [e, newuser] = await to(models.users.create({
-                email: email || "",
-                phone: phone || "",
-              }));
-              if(e) return helper.logErrorAndRespond('signin > create new user > ', e, reject);
-              user = newuser;
-              isNewUser = true;
-            }
-
-            // get user and format it
-            [error, user] = await to(getUserAndFormat(user.id));
-            if(error) return helper.logErrorAndRespond('signin > getUserAndFormat > ', error, reject);
-
-
-            // create token and send it
-            let payload = { id: user.id, email: email, phone: phone };
-            let token = jwt.encode(payload, jwtSecret);
-            // resolve({ status: 200, message: 'Login success', token, isNewUser, user });
-            resolve({ status: 200, message: 'Login success', token, user });
-        });
-    },
-    /**
-     * formTwo - validate and update profile information
-     * @param {OBJECT} credential - contains username and password
-     */
-    signUp: function(request){
+     authenticate: function(request){
       return new Promise(async (resolve, reject) => {
-        let { name, email = "", phone = "", isSubscribe: is_subscribe } = request.body;
+        let { name, email = "", phone = "", isSubscribe: is_subscribe, score } = request.body;
         let error, response, user_id;
 
         // validation
@@ -88,10 +45,17 @@ module.exports = {
         }else user_id = response.user.id;
 
         console.log("user_id is ", user_id);
-       
-        // create token and send it
-        let payload = { id: user_id, email: email ? email : response.user?.email, phone: phone ? phone:response.user?.phone };
-        let token = jwt.encode(payload, jwtSecret);
+         // create token and send it
+         let payload = { id: user_id, email: email ? email : response.user?.email, phone: phone ? phone:response.user?.phone };
+         let token = jwt.encode(payload, jwtSecret);
+
+        if(score != null || score != undefined){
+          request.user = payload;
+          // save game
+          let [gameError, game] = await to(gameController.save(request))
+          if(gameError) return reject(gameError);
+
+        }
         // resolve({ status: 200, message: 'Login success', token, isNewUser, user });
         resolve({ status: 200, message: 'Login success', token, user: payload });
       });
@@ -111,8 +75,8 @@ module.exports = {
         // Cookies that have been signed
         // server side validation
         if(!req.cookies.token && !isAllowed) return res.status(401).json({ success: false, message: "Authentication required" });
-        
-        // allow user to access 
+
+        // allow user to access
         if(!req.cookies.token && isAllowed) return next();
 
         let token = req.cookies.token
@@ -150,7 +114,7 @@ module.exports = {
         logger.info("google verify", req.body.token);
 
         // bypass google recaptcha in postman only for dev use
-        if(config.env === "local" && req.body.krdsbypass) return next();
+        if(config.env === "local" && req.body.bypass) return next();
 
         // required validation
         if(!req.body.token) {
@@ -206,10 +170,11 @@ function signinValidation(data){
  * @param {OBJECT} data - request body
  */
 function signupValidation(data){
-  let { name, email, phone = "", isSubscribe: is_subscribe } = data;
+  let { name, email, phone = "", isSubscribe: is_subscribe, score } = data;
+  if(score === null || score === undefined) return { success: false, status: 400, message:  "Score required" };
   if(!email || !phone) return { success: false, status: 400, message:  "Phone and Email required" };
   if(email && !helper.validateEmail(email)) return { success: false, status: 400, message: "Invalid email address" };
-  if(phone && phone.toString().length < 11) return { success: false, status: 400, message: "Invalid phone number" };
+  if(phone && !helper.validatePhone(phone)) return { success: false, status: 400, message: "Invalid phone number" };
   return { success: true };
 }
 
@@ -238,9 +203,9 @@ function checkModification(user, phone, email){
  */
 function checkUserExists(phone, email){
   return new Promise(async (resolve, reject) => {
-    let [error, user] = await to(models.users.findOne({ 
+    let [error, user] = await to(models.users.findOne({
       attributes: ["id", "name", "email", "phone"],
-      where: { 
+      where: {
         [Op.or]: [
           { email: email },
           { phone: phone }
@@ -254,7 +219,7 @@ function checkUserExists(phone, email){
     // user already registered but email/phone mismatch
     if(user.email != email) return resolve({ success: false, status: 400, message: "email_invalid" });
     if(user.phone != phone) return resolve({ success: false, status: 400, message: "phone_invalid" });
-  
+
     return resolve({ success: true, user })
   });
 }

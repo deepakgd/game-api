@@ -17,12 +17,12 @@ const config = {
   dbPort: process.env.DB_PORT,
   jwtSecret: 'AKIAJFV3H2GICSQM64RQ',
   appPort: process.env.APP_PORT,
-  fromEmail: 'no-reply@krds.fr',
+  fromEmail: 'deepakgcsevpm@gmail.com',
   locales: ["en_US", "zh_CN"],
   timezone: "Asia/Shanghai", // utc + 8 hours is Asia/Shanghai
   reportEmail: '',
   game: {
-    maxScore: 1000
+    maxScore: 5000
   },
   recaptcha: {
     siteKey: '',

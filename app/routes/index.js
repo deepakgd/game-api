@@ -9,7 +9,7 @@ const authController = require("@controllers/auth"),
 // authentication for particular route to view report details
 const staticUserAuth = basicAuth({
   users: {
-    'admin': 'krds@krds@123'
+    'admin': 'password'
   },
   challenge: true
 });
@@ -23,24 +23,12 @@ router.get("/", (req, res) => {
 });
 
 
-/**
- * /signin - validate and create jwt token based on name and phone/email
- */
- router.post("/signin", async (req, res) => {
-  let [error, response] = await to(authController.login(req));
-  if(error) return res.status(500).json({ success: false, message: 'Something went wrong' });
-
-  let data = { success: (response.status === 200)?true:false, message: response.message, isNewUser: response.isNewUser }
-  if(response.status === 200) res.setHeader('Set-Cookie', `token=${response.token}; HttpOnly`);
-  if(response.status === 200 && response.user) data = Object.assign(data, response.user);
-  return res.status(response.status).json(data);
-});
 
 /**
  * /profile - update user profile
  */
-router.post("/signup", async (req, res) => {
-  let [error, response] = await to(authController.signUp(req));
+router.post("/authenticate", async (req, res) => {
+  let [error, response] = await to(authController.authenticate(req));
   if(error) return res.status(500).json({ success: false, message: 'Something went wrong' });
   if(response.status === 200) res.setHeader('Set-Cookie', `token=${response.token}; HttpOnly`);
   return res.status(response.status).json(response);
@@ -69,15 +57,6 @@ router.post("/signup", async (req, res) => {
 });
 
 
-/**
- * /showscore - show user scores and rank details
- */
- router.get("/showscore", authController.validate, async (req, res) => {
-  let [error, response] = await to(gameController.showScore(req));
-  if(error) return res.status(500).json({ success: false, message: 'Something went wrong' });
-  return res.status(response.status).json({ success: (response.status === 200)?true:false, message: response.message, data: response.data });
-})
-
 
 /**
  * /leaderboard - show user scores and rank details
@@ -94,6 +73,14 @@ router.post("/signup", async (req, res) => {
  */
  router.get("/report/download", staticUserAuth, async (req, res) => {
   gameController.downloadReportByDate(req, res);
+});
+
+/**
+ * /logout - logout
+ */
+router.get('/logout', (req, res)=>{
+  res.setHeader("Set-Cookie", `token=; HttpOnly;`);
+  res.json({ message: "Logout success" });
 });
 
 
